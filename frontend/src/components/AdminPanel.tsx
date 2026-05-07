@@ -8,6 +8,7 @@ type AdminPanelProps = {
   onDelete: (mysteryId: string) => Promise<void>
   onLoadSubmissions: (mysteryId: string) => Promise<void>
   onResetSubmissions: (mysteryId: string) => Promise<void>
+  onUploadImage: (file: File) => Promise<string>
   onUpdate: (mystery: AdminMystery) => Promise<void>
   onLogout: () => void
 }
@@ -38,6 +39,7 @@ function AdminPanel({
   onDelete,
   onLoadSubmissions,
   onResetSubmissions,
+  onUploadImage,
   onUpdate,
   onLogout,
 }: AdminPanelProps) {
@@ -209,6 +211,30 @@ function AdminPanel({
                   onChange={(event) => setDraft({ ...draft, image: event.target.value })}
                   placeholder="hero, /mysteries/001.jpg ou https://..."
                   value={draft.image}
+                />
+                <input
+                  accept="image/*"
+                  className="text-xs text-zinc-500 file:mr-4 file:rounded-full file:border-0 file:bg-zinc-800 file:px-4 file:py-2 file:text-zinc-200"
+                  onChange={async (event) => {
+                    const file = event.target.files?.[0]
+                    if (!file) {
+                      return
+                    }
+
+                    try {
+                      setBusy(true)
+                      setStatus('Enviando imagem...')
+                      const imageUrl = await onUploadImage(file)
+                      setDraft((current) => ({ ...current, image: imageUrl }))
+                      setStatus('Imagem enviada.')
+                    } catch (error) {
+                      setStatus(error instanceof Error ? error.message : 'Falha ao enviar imagem.')
+                    } finally {
+                      event.target.value = ''
+                      setBusy(false)
+                    }
+                  }}
+                  type="file"
                 />
               </label>
               <label className="grid gap-2 text-sm">

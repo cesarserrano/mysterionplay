@@ -6,6 +6,7 @@ import Leaderboard from './components/Leaderboard'
 import MysteryCard from './components/MysteryCard'
 import YesterdayMystery from './components/YesterdayMystery'
 import {
+  adminLogout,
   adminLogin,
   createAdminMystery,
   deleteAdminMystery,
@@ -14,6 +15,7 @@ import {
   fetchGame,
   resetAdminSubmissions,
   submitGuess,
+  uploadAdminImage,
   updateAdminMystery,
 } from './lib/api'
 import type { AdminMystery, AdminSubmission, GamePayload } from './types'
@@ -21,7 +23,6 @@ import type { AdminMystery, AdminSubmission, GamePayload } from './types'
 const buildLabel = `v${__APP_VERSION__}-${__APP_COMMIT__}`
 const PLAYER_ID_KEY = 'mysterionplay.player-id'
 const PLAYER_NAME_KEY = 'mysterionplay.player-name'
-const ADMIN_TOKEN_KEY = 'mysterionplay.admin-token'
 
 function getRoute() {
   return window.location.pathname.startsWith('/admin') ? 'admin' : 'game'
@@ -106,7 +107,8 @@ function App() {
   const [busy, setBusy] = useState(false)
   const [game, setGame] = useState<GamePayload | null>(null)
   const [error, setError] = useState<string | null>(null)
-  const [adminToken, setAdminToken] = useState(() => window.localStorage.getItem(ADMIN_TOKEN_KEY) ?? '')
+  const [adminAuthenticated, setAdminAuthenticated] = useState(false)
+  const [adminChecked, setAdminChecked] = useState(false)
   const [adminDraftToken, setAdminDraftToken] = useState('')
   const [adminBusy, setAdminBusy] = useState(false)
   const [adminError, setAdminError] = useState<string | null>(null)
@@ -164,12 +166,23 @@ function App() {
   }, [playerId, route])
 
   useEffect(() => {
-    if (route === 'admin' && adminToken) {
+    if (route === 'admin') {
       let cancelled = false
       const load = async () => {
-        const payload = await fetchAdminMysteries(adminToken)
-        if (!cancelled) {
-          setAdminMysteries(payload.mysteries)
+        try {
+          const payload = await fetchAdminMysteries()
+          if (!cancelled) {
+            setAdminAuthenticated(true)
+            setAdminError(null)
+            setAdminChecked(true)
+            setAdminMysteries(payload.mysteries)
+          }
+        } catch (loadError) {
+          if (!cancelled) {
+            setAdminAuthenticated(false)
+            setAdminChecked(true)
+            setAdminError(loadError instanceof Error ? loadError.message : 'Sessao invalida.')
+          }
         }
       }
 
@@ -180,7 +193,7 @@ function App() {
     }
 
     return undefined
-  }, [adminToken, route])
+  }, [route])
 
   const unlockedCount = useMemo(() => {
     if (!game) {
@@ -238,10 +251,10 @@ function App() {
     setAdminError(null)
     try {
       await adminLogin(adminDraftToken)
-      window.localStorage.setItem(ADMIN_TOKEN_KEY, adminDraftToken)
-      setAdminToken(adminDraftToken)
       setAdminDraftToken('')
-      const payload = await fetchAdminMysteries(adminDraftToken)
+      const payload = await fetchAdminMysteries()
+      setAdminAuthenticated(true)
+      setAdminChecked(true)
       setAdminMysteries(payload.mysteries)
     } catch (loginError) {
       setAdminError(loginError instanceof Error ? loginError.message : 'Falha no login.')
@@ -252,11 +265,27 @@ function App() {
 
   function navigate(nextRoute: 'game' | 'admin') {
     const path = nextRoute === 'admin' ? '/admin' : '/'
+    if (nextRoute === 'admin') {
+      setAdminChecked(false)
+    }
     window.history.pushState({}, '', path)
     setRoute(nextRoute)
   }
 
-  if (route === 'admin' && !adminToken) {
+  if (route === 'admin' && !adminChecked) {
+    return (
+      <main className="min-h-screen bg-zinc-950 text-zinc-100">
+        <div className="mx-auto flex min-h-screen max-w-xl items-center px-4 py-10 sm:px-6">
+          <section className="w-full rounded-[2rem] border border-zinc-800 bg-zinc-900/70 p-5 sm:p-6">
+            <p className="text-[11px] uppercase tracking-[0.45em] text-zinc-500">admin</p>
+            <h1 className="mt-3 text-3xl font-semibold text-zinc-50">Verificando a sala.</h1>
+          </section>
+        </div>
+      </main>
+    )
+  }
+
+  if (route === 'admin' && !adminAuthenticated) {
     return (
       <main className="min-h-screen bg-zinc-950 text-zinc-100">
         <div className="mx-auto flex min-h-screen max-w-xl items-center px-4 py-10 sm:px-6">
@@ -300,32 +329,37 @@ function App() {
       <AdminPanel
         mysteries={adminMysteries}
         onCreate={async (mystery) => {
-          await createAdminMystery(adminToken, mystery)
-          const payload = await fetchAdminMysteries(adminToken)
+          await createAdminMystery(mystery)
+          const payload = await fetchAdminMysteries()
           setAdminMysteries(payload.mysteries)
         }}
         onDelete={async (mysteryId) => {
-          await deleteAdminMystery(adminToken, mysteryId)
-          const payload = await fetchAdminMysteries(adminToken)
+          await deleteAdminMystery(mysteryId)
+          const payload = await fetchAdminMysteries()
           setAdminMysteries(payload.mysteries)
         }}
         onLoadSubmissions={async (mysteryId) => {
-          const payload = await fetchAdminSubmissions(adminToken, mysteryId)
+          const payload = await fetchAdminSubmissions(mysteryId)
           setAdminSubmissions(payload.submissions)
         }}
-        onLogout={() => {
-          window.localStorage.removeItem(ADMIN_TOKEN_KEY)
-          setAdminToken('')
+        onLogout={async () => {
+          await adminLogout()
+          setAdminAuthenticated(false)
+          setAdminChecked(true)
           navigate('game')
         }}
         onResetSubmissions={async (mysteryId) => {
-          await resetAdminSubmissions(adminToken, mysteryId)
-          const payload = await fetchAdminSubmissions(adminToken, mysteryId)
+          await resetAdminSubmissions(mysteryId)
+          const payload = await fetchAdminSubmissions(mysteryId)
           setAdminSubmissions(payload.submissions)
         }}
+        onUploadImage={async (file) => {
+          const payload = await uploadAdminImage(file)
+          return payload.imageUrl
+        }}
         onUpdate={async (mystery) => {
-          await updateAdminMystery(adminToken, mystery)
-          const payload = await fetchAdminMysteries(adminToken)
+          await updateAdminMystery(mystery)
+          const payload = await fetchAdminMysteries()
           setAdminMysteries(payload.mysteries)
         }}
         submissions={adminSubmissions}
@@ -352,9 +386,6 @@ function App() {
           <a className="hover:text-zinc-100" href="#ranking">
             Ranking
           </a>
-          <button className="hover:text-zinc-100" onClick={() => navigate('admin')} type="button">
-            Admin
-          </button>
         </nav>
       </header>
 
@@ -388,6 +419,13 @@ function App() {
                   {nextHintLabel ? 'Tempo ate a proxima dica.' : 'Nenhum segredo resta escondido hoje.'}
                 </p>
               </section>
+              {game.tomorrow ? (
+                <section className="rounded-[2rem] border border-zinc-800 bg-zinc-900/45 p-4 sm:p-5">
+                  <p className="text-[11px] uppercase tracking-[0.35em] text-zinc-500">amanha</p>
+                  <p className="mt-3 text-lg font-semibold text-zinc-50">{game.tomorrow.title}</p>
+                  <p className="mt-2 text-sm text-zinc-400">{game.tomorrow.date}</p>
+                </section>
+              ) : null}
               <Leaderboard entries={game.leaderboard} />
             </div>
           </section>

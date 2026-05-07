@@ -1,4 +1,17 @@
 services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: mysterion_postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-mysterionplay}
+      POSTGRES_USER: ${POSTGRES_USER:-mysterion}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-mysterion}
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
   backend:
     build:
       context: ./backend
@@ -6,11 +19,15 @@ services:
     restart: unless-stopped
     environment:
       ADMIN_TOKEN: ${ADMIN_TOKEN:-change-me}
+      ADMIN_SESSION_SECRET: ${ADMIN_SESSION_SECRET:-change-me-too}
       APP_TIMEZONE: ${APP_TIMEZONE:-America/Sao_Paulo}
+      DATABASE_URL: ${DATABASE_URL:-postgresql://mysterion:mysterion@postgres:5432/mysterionplay}
+    depends_on:
+      - postgres
     ports:
       - "3001:3001"
     volumes:
-      - ./backend/data:/app/data
+      - ./backend/uploads:/app/uploads
 
   frontend:
     build:
@@ -25,3 +42,6 @@ services:
 
     ports:
       - "3000:80"
+
+volumes:
+  postgres_data:

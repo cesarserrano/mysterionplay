@@ -37,6 +37,7 @@ export type GamePayload = {
   leaderboard: LeaderboardEntry[]
   player: PlayerState | null
   yesterday: YesterdayMystery | null
+  tomorrow: PublicMystery | null
 }
 
 export type GuessResponse = {
@@ -61,4 +62,8 @@ export type AdminSubmission = {
   startedAt: string
   solvedAt: string | null
   hintsUsed: number
+}
+
+export type AdminSessionResponse = {
+  ok: true
 }

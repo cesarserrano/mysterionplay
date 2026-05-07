@@ -1,4 +1,4 @@
-import type { AdminMystery, AdminSubmission, GamePayload, GuessResponse } from '../types'
+import type { AdminMystery, AdminSessionResponse, AdminSubmission, GamePayload, GuessResponse } from '../types'
 
 async function request<T>(input: string, init?: RequestInit) {
   const headers = new Headers(init?.headers)
@@ -8,6 +8,7 @@ async function request<T>(input: string, init?: RequestInit) {
 
   const response = await fetch(input, {
     ...init,
+    credentials: 'same-origin',
     headers,
   })
 
@@ -35,51 +36,66 @@ export function submitGuess(payload: { playerId: string; nickname: string; guess
 }
 
 export function adminLogin(token: string) {
-  return request<{ ok: true }>('/api/admin/login', {
+  return request<AdminSessionResponse>('/api/admin/login', {
     method: 'POST',
     body: JSON.stringify({ token }),
   })
 }
 
-export function fetchAdminMysteries(token: string) {
-  return request<{ mysteries: AdminMystery[] }>('/api/admin/mysteries', {
-    headers: { 'x-admin-token': token },
+export function adminLogout() {
+  return request<AdminSessionResponse>('/api/admin/logout', {
+    method: 'POST',
   })
 }
 
-export function fetchAdminSubmissions(token: string, mysteryId: string) {
-  return request<{ submissions: AdminSubmission[] }>(
-    `/api/admin/submissions?mysteryId=${encodeURIComponent(mysteryId)}`,
-    { headers: { 'x-admin-token': token } },
-  )
+export function fetchAdminMysteries() {
+  return request<{ mysteries: AdminMystery[] }>('/api/admin/mysteries')
 }
 
-export function createAdminMystery(token: string, mystery: AdminMystery) {
+export function fetchAdminSubmissions(mysteryId: string) {
+  return request<{ submissions: AdminSubmission[] }>(`/api/admin/submissions?mysteryId=${encodeURIComponent(mysteryId)}`)
+}
+
+export function createAdminMystery(mystery: AdminMystery) {
   return request<{ mystery: AdminMystery }>('/api/admin/mysteries', {
     method: 'POST',
-    headers: { 'x-admin-token': token },
     body: JSON.stringify(mystery),
   })
 }
 
-export function updateAdminMystery(token: string, mystery: AdminMystery) {
+export function updateAdminMystery(mystery: AdminMystery) {
   return request<{ mystery: AdminMystery }>(`/api/admin/mysteries/${encodeURIComponent(mystery.id)}`, {
     method: 'PUT',
-    headers: { 'x-admin-token': token },
     body: JSON.stringify(mystery),
   })
 }
 
-export function deleteAdminMystery(token: string, mysteryId: string) {
+export function deleteAdminMystery(mysteryId: string) {
   return request<null>(`/api/admin/mysteries/${encodeURIComponent(mysteryId)}`, {
     method: 'DELETE',
-    headers: { 'x-admin-token': token },
   })
 }
 
-export function resetAdminSubmissions(token: string, mysteryId: string) {
+export function resetAdminSubmissions(mysteryId: string) {
   return request<{ ok: true }>(`/api/admin/mysteries/${encodeURIComponent(mysteryId)}/reset-submissions`, {
     method: 'POST',
-    headers: { 'x-admin-token': token },
   })
+}
+
+export async function uploadAdminImage(file: File) {
+  const formData = new FormData()
+  formData.append('image', file)
+
+  const response = await fetch('/api/admin/upload', {
+    method: 'POST',
+    body: formData,
+    credentials: 'same-origin',
+  })
+
+  if (!response.ok) {
+    const data = (await response.json().catch(() => null)) as { error?: string } | null
+    throw new Error(data?.error ?? 'Falha no upload.')
+  }
+
+  return (await response.json()) as { imageUrl: string }
 }
