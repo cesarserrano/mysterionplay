@@ -3,11 +3,24 @@ type AnswerFormProps = {
   onChange: (value: string) => void
   onSubmit: () => void
   attempts: number
+  nickname: string
+  onNicknameChange: (value: string) => void
   solved: boolean
   message: string
+  busy: boolean
 }
 
-function AnswerForm({ value, onChange, onSubmit, attempts, solved, message }: AnswerFormProps) {
+function AnswerForm({
+  value,
+  onChange,
+  onSubmit,
+  attempts,
+  nickname,
+  onNicknameChange,
+  solved,
+  message,
+  busy,
+}: AnswerFormProps) {
   return (
     <section className="rounded-[2rem] border border-zinc-800 bg-zinc-900/65 p-4 sm:p-5">
       <form
@@ -18,16 +31,23 @@ function AnswerForm({ value, onChange, onSubmit, attempts, solved, message }: An
         }}
       >
         <input
+          className="min-w-0 rounded-2xl border border-zinc-800 bg-zinc-950 px-4 py-3 text-zinc-100 outline-none placeholder:text-zinc-600 focus:border-zinc-500"
+          onChange={(event) => onNicknameChange(event.target.value)}
+          placeholder="Seu nome no ranking"
+          value={nickname}
+        />
+        <input
           className="min-w-0 rounded-2xl border border-zinc-800 bg-zinc-950 px-4 py-3 text-zinc-100 outline-none placeholder:text-zinc-600 focus:border-amber-300/70"
           onChange={(event) => onChange(event.target.value)}
           placeholder="Digite sua resposta"
           value={value}
         />
         <button
-          className="rounded-2xl bg-amber-200 px-6 py-3 font-medium text-zinc-950 transition hover:bg-amber-100"
+          className="rounded-2xl bg-amber-200 px-6 py-3 font-medium text-zinc-950 transition hover:bg-amber-100 disabled:cursor-not-allowed disabled:opacity-70"
+          disabled={busy}
           type="submit"
         >
-          Responder
+          {busy ? 'Enviando...' : 'Responder'}
         </button>
       </form>
 

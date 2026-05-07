@@ -1,10 +1,13 @@
-import type { Mystery } from '../data/mysteries'
+import heroImage from '../assets/hero.png'
+import type { YesterdayMystery as YesterdayMysteryType } from '../types'
 
 type YesterdayMysteryProps = {
-  mystery: Mystery
+  mystery: YesterdayMysteryType
 }
 
 function YesterdayMystery({ mystery }: YesterdayMysteryProps) {
+  const imageSrc = mystery.image === 'hero' ? heroImage : mystery.image
+
   return (
     <section className="rounded-[2rem] border border-zinc-800 bg-zinc-900/65 p-4 sm:p-5">
       <div className="flex items-end justify-between gap-4">
@@ -16,7 +19,7 @@ function YesterdayMystery({ mystery }: YesterdayMysteryProps) {
       </div>
 
       <div className="mt-4 overflow-hidden rounded-[1.5rem] border border-zinc-800 bg-zinc-950">
-        <img alt={`Resposta anterior: ${mystery.answer}`} className="aspect-[4/3] w-full object-cover opacity-80" src={mystery.image} />
+        <img alt={`Resposta anterior: ${mystery.answer}`} className="aspect-[4/3] w-full object-cover opacity-80" src={imageSrc} />
       </div>
 
       <p className="mt-4 text-sm leading-6 text-zinc-400">{mystery.explanation}</p>

@@ -30,4 +30,9 @@ export default defineConfig({
     __APP_COMMIT__: JSON.stringify(getCommitHash()),
   },
   plugins: [react(), tailwindcss()],
+  server: {
+    proxy: {
+      '/api': 'http://localhost:3001',
+    },
+  },
 })

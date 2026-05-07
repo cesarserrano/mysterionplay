@@ -1,4 +1,4 @@
-import type { Hint } from '../data/mysteries'
+import type { Hint } from '../types'
 
 type HintListProps = {
   hints: Hint[]

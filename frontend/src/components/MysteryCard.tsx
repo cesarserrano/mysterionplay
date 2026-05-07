@@ -1,10 +1,13 @@
-import type { Mystery } from '../data/mysteries'
+import heroImage from '../assets/hero.png'
+import type { PublicMystery } from '../types'
 
 type MysteryCardProps = {
-  mystery: Mystery
+  mystery: PublicMystery
 }
 
 function MysteryCard({ mystery }: MysteryCardProps) {
+  const imageSrc = mystery.image === 'hero' ? heroImage : mystery.image
+
   return (
     <section
       id="misterio"
@@ -14,7 +17,7 @@ function MysteryCard({ mystery }: MysteryCardProps) {
         <img
           alt={mystery.title}
           className="aspect-[4/3] w-full object-cover"
-          src={mystery.image}
+          src={imageSrc}
         />
       </div>
       <div className="mt-4 flex items-start justify-between gap-4">

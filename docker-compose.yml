@@ -1,4 +1,16 @@
 services:
+  backend:
+    build:
+      context: ./backend
+    container_name: mysterion_backend
+    restart: unless-stopped
+    environment:
+      ADMIN_TOKEN: ${ADMIN_TOKEN:-change-me}
+      APP_TIMEZONE: ${APP_TIMEZONE:-America/Sao_Paulo}
+    ports:
+      - "3001:3001"
+    volumes:
+      - ./backend/data:/app/data
 
   frontend:
     build:
@@ -8,6 +20,8 @@ services:
         APP_VERSION: ${APP_VERSION:-0.1.0}
     container_name: mysterion_frontend
     restart: unless-stopped
+    depends_on:
+      - backend
 
     ports:
       - "3000:80"

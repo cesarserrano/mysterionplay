@@ -1,4 +1,4 @@
-import type { LeaderboardEntry } from '../data/mysteries'
+import type { LeaderboardEntry } from '../types'
 
 type LeaderboardProps = {
   entries: LeaderboardEntry[]
@@ -12,7 +12,7 @@ function Leaderboard({ entries }: LeaderboardProps) {
           <p className="text-[11px] uppercase tracking-[0.35em] text-zinc-500">ranking diario</p>
           <h3 className="mt-2 text-lg font-semibold text-zinc-100">Os mais rapidos.</h3>
         </div>
-        <p className="text-xs text-zinc-500">mockado por enquanto</p>
+        <p className="text-xs text-zinc-500">tempo real simples</p>
       </div>
 
       <div className="mt-4 overflow-hidden rounded-2xl border border-zinc-800">

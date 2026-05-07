@@ -1,0 +1,68 @@
+{
+  "mysteries": [
+    {
+      "id": "001",
+      "date": "2026-05-06",
+      "title": "Misterio #001",
+      "image": "hero",
+      "answer": "chernobyl",
+      "aliases": ["tchernobyl", "pripyat", "usina de chernobyl", "chernobil"],
+      "tips": [
+        { "unlockAt": "09:00", "text": "Nem tudo abandonado esta morto." },
+        { "unlockAt": "12:00", "text": "O silencio aqui tem um som especifico." },
+        { "unlockAt": "15:00", "text": "1986 mudou este lugar para sempre." },
+        { "unlockAt": "18:00", "text": "A natureza venceu parcialmente." },
+        { "unlockAt": "21:00", "text": "Ucrania." }
+      ],
+      "explanation": "Chernobyl virou simbolo de desastre, abandono e memoria contaminada."
+    },
+    {
+      "id": "000",
+      "date": "2026-05-05",
+      "title": "Ontem",
+      "image": "hero",
+      "answer": "manhattan project",
+      "aliases": ["projeto manhattan", "manhattan", "los alamos"],
+      "tips": [
+        { "unlockAt": "09:00", "text": "Tudo comecou antes da explosao." },
+        { "unlockAt": "12:00", "text": "Nao era apenas ciencia." },
+        { "unlockAt": "15:00", "text": "O segredo tinha endereco." },
+        { "unlockAt": "18:00", "text": "Guerra acelera o impossivel." },
+        { "unlockAt": "21:00", "text": "Novo Mexico." }
+      ],
+      "explanation": "O misterio anterior apontava para o programa que mudou a guerra e o seculo."
+    }
+  ],
+  "submissions": [
+    {
+      "id": "seed-1",
+      "mysteryId": "000",
+      "playerId": "seed-nocturno",
+      "name": "nocturno",
+      "attempts": 1,
+      "startedAt": "2026-05-05T00:00:00.000Z",
+      "solvedAt": "2026-05-05T00:01:06.000Z",
+      "hintsUsed": 0
+    },
+    {
+      "id": "seed-2",
+      "mysteryId": "000",
+      "playerId": "seed-cinza",
+      "name": "cinza",
+      "attempts": 2,
+      "startedAt": "2026-05-05T00:00:00.000Z",
+      "solvedAt": "2026-05-05T00:04:29.000Z",
+      "hintsUsed": 1
+    },
+    {
+      "id": "seed-3",
+      "mysteryId": "000",
+      "playerId": "seed-ruido",
+      "name": "ruido_branco",
+      "attempts": 3,
+      "startedAt": "2026-05-05T00:00:00.000Z",
+      "solvedAt": "2026-05-05T00:08:13.000Z",
+      "hintsUsed": 2
+    }
+  ]
+}
