@@ -1,7 +1,11 @@
 services:
 
   frontend:
-    build: ./frontend
+    build:
+      context: ./frontend
+      args:
+        APP_COMMIT: ${APP_COMMIT:-unknown}
+        APP_VERSION: ${APP_VERSION:-0.1.0}
     container_name: mysterion_frontend
     restart: unless-stopped
 
