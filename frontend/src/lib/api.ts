@@ -1,12 +1,14 @@
 import type { AdminMystery, AdminSubmission, GamePayload, GuessResponse } from '../types'
 
 async function request<T>(input: string, init?: RequestInit) {
+  const headers = new Headers(init?.headers)
+  if (!headers.has('Content-Type')) {
+    headers.set('Content-Type', 'application/json')
+  }
+
   const response = await fetch(input, {
-    headers: {
-      'Content-Type': 'application/json',
-      ...(init?.headers ?? {}),
-    },
     ...init,
+    headers,
   })
 
   if (!response.ok) {

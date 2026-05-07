@@ -135,7 +135,7 @@ function requireAdmin(req, res, next) {
   next()
 }
 
-function validateMystery(body) {
+function validateMystery(body = {}) {
   const tips = Array.isArray(body.tips) ? body.tips : []
   return {
     id: String(body.id ?? '').trim(),
