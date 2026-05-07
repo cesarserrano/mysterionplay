@@ -219,18 +219,19 @@ async function getAllMysteries() {
 
 function getTimeline(mysteries, dateKey) {
   const sortedAsc = [...mysteries].sort((left, right) => left.date.localeCompare(right.date))
-  const currentIndex = sortedAsc.findLastIndex((mystery) => mystery.date <= dateKey)
-  const fallbackIndex = currentIndex === -1 ? sortedAsc.length - 1 : currentIndex
-  const today = sortedAsc[fallbackIndex] ?? null
-
-  if (!today) {
-    return { today: null, yesterday: null, tomorrow: null }
-  }
+  const today = sortedAsc.find((mystery) => mystery.date === dateKey) ?? null
+  const todayIndex = today ? sortedAsc.findIndex((mystery) => mystery.id === today.id) : -1
+  const previousIndex = today
+    ? todayIndex - 1
+    : sortedAsc.findLastIndex((mystery) => mystery.date < dateKey)
+  const nextIndex = today
+    ? todayIndex + 1
+    : sortedAsc.findIndex((mystery) => mystery.date > dateKey)
 
   return {
     today,
-    yesterday: sortedAsc[fallbackIndex - 1] ?? null,
-    tomorrow: sortedAsc[fallbackIndex + 1] ?? null,
+    yesterday: previousIndex >= 0 ? sortedAsc[previousIndex] : null,
+    tomorrow: nextIndex >= 0 ? sortedAsc[nextIndex] : null,
   }
 }
 
@@ -334,29 +335,6 @@ async function getSubmission(mysteryId, playerId) {
   return result.rows[0] ?? null
 }
 
-async function trackHintsExposure(submission, mystery) {
-  if (!submission || submission.solved_at) {
-    return submission
-  }
-
-  const unlockedCount = getUnlockedCount(mystery)
-  if (unlockedCount <= submission.hints_used) {
-    return submission
-  }
-
-  const result = await pool.query(
-    `
-      UPDATE submissions
-      SET hints_used = $3
-      WHERE mystery_id = $1 AND player_id = $2
-      RETURNING *
-    `,
-    [mystery.id, submission.player_id, unlockedCount],
-  )
-
-  return result.rows[0] ?? submission
-}
-
 app.get('/api/health', (_req, res) => {
   res.json({ ok: true })
 })
@@ -372,8 +350,7 @@ app.get('/api/game', async (req, res) => {
   }
 
   const playerId = String(req.query.playerId ?? '').trim()
-  let playerSubmission = playerId ? await getSubmission(timeline.today.id, playerId) : null
-  playerSubmission = await trackHintsExposure(playerSubmission, timeline.today)
+  const playerSubmission = playerId ? await getSubmission(timeline.today.id, playerId) : null
 
   res.json({
     today: toPublicMystery(timeline.today),
@@ -396,6 +373,62 @@ app.get('/api/game', async (req, res) => {
       : null,
     tomorrow: timeline.tomorrow ? toPublicMystery(timeline.tomorrow) : null,
   })
+})
+
+app.post('/api/game/reveal-hint', async (req, res) => {
+  const { playerId, nickname, mysteryId, hintIndex } = req.body ?? {}
+  const cleanPlayerId = String(playerId ?? '').trim()
+  const cleanMysteryId = String(mysteryId ?? '').trim()
+  const cleanNickname = String(nickname ?? '').trim()
+  const safeHintIndex = Number(hintIndex)
+
+  if (!cleanPlayerId || !cleanMysteryId || Number.isNaN(safeHintIndex) || safeHintIndex < 0) {
+    res.status(400).json({ error: 'Revelacao invalida.' })
+    return
+  }
+
+  const resultMystery = await pool.query('SELECT * FROM mysteries WHERE id = $1 LIMIT 1', [cleanMysteryId])
+  if (resultMystery.rowCount === 0) {
+    res.status(404).json({ error: 'Misterio nao encontrado.' })
+    return
+  }
+
+  const mystery = normalizeMysteryRow(resultMystery.rows[0])
+  const unlockedCount = getUnlockedCount(mystery)
+  const nextHintsUsed = Math.min(unlockedCount, safeHintIndex + 1)
+
+  let submission = await getSubmission(cleanMysteryId, cleanPlayerId)
+  if (!submission) {
+    const created = await pool.query(
+      `
+        INSERT INTO submissions (id, mystery_id, player_id, name, attempts, started_at, solved_at, hints_used)
+        VALUES ($1, $2, $3, $4, 0, $5, NULL, $6)
+        RETURNING *
+      `,
+      [
+        `${cleanMysteryId}-${cleanPlayerId}`,
+        cleanMysteryId,
+        cleanPlayerId,
+        cleanNickname || `visitante_${cleanPlayerId.slice(-4)}`,
+        new Date().toISOString(),
+        nextHintsUsed,
+      ],
+    )
+    submission = created.rows[0]
+  } else {
+    const updated = await pool.query(
+      `
+        UPDATE submissions
+        SET name = $3, hints_used = GREATEST(hints_used, $4)
+        WHERE mystery_id = $1 AND player_id = $2
+        RETURNING *
+      `,
+      [cleanMysteryId, cleanPlayerId, cleanNickname || submission.name, nextHintsUsed],
+    )
+    submission = updated.rows[0]
+  }
+
+  res.json({ hintsUsed: submission.hints_used })
 })
 
 app.post('/api/game/guess', async (req, res) => {
@@ -452,8 +485,6 @@ app.post('/api/game/guess', async (req, res) => {
     )
     submission = result.rows[0]
   }
-
-  submission = await trackHintsExposure(submission, today)
 
   if (submission.solved_at) {
     res.json({

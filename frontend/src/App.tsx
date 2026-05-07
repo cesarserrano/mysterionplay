@@ -13,6 +13,7 @@ import {
   fetchAdminMysteries,
   fetchAdminSubmissions,
   fetchGame,
+  revealHint,
   resetAdminSubmissions,
   submitGuess,
   uploadAdminImage,
@@ -84,16 +85,17 @@ function formatCountdown(ms: number) {
 }
 
 function getNextHintLabel(game: GamePayload | null, now: Date) {
-  if (!game) {
+  if (!game?.today) {
     return null
   }
 
-  const pendingTip = game.today.tips.find((tip) => !getUnlockStatus(game.today.date, tip.unlockAt, now))
+  const today = game.today
+  const pendingTip = today.tips.find((tip) => !getUnlockStatus(today.date, tip.unlockAt, now))
   if (!pendingTip) {
     return null
   }
 
-  const unlockDate = new Date(`${game.today.date}T${pendingTip.unlockAt}:00`)
+  const unlockDate = new Date(`${today.date}T${pendingTip.unlockAt}:00`)
   return formatCountdown(unlockDate.getTime() - now.getTime())
 }
 
@@ -105,6 +107,7 @@ function App() {
   const [guess, setGuess] = useState('')
   const [message, setMessage] = useState('Observe.')
   const [busy, setBusy] = useState(false)
+  const [revealingHint, setRevealingHint] = useState(false)
   const [game, setGame] = useState<GamePayload | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [adminAuthenticated, setAdminAuthenticated] = useState(false)
@@ -196,16 +199,22 @@ function App() {
   }, [route])
 
   const unlockedCount = useMemo(() => {
-    if (!game) {
+    if (!game?.today) {
       return 0
     }
 
-    return game.today.tips.filter((tip) => getUnlockStatus(game.today.date, tip.unlockAt, now)).length
+    const today = game.today
+    return today.tips.filter((tip) => getUnlockStatus(today.date, tip.unlockAt, now)).length
   }, [game, now])
 
   const nextHintLabel = useMemo(() => getNextHintLabel(game, now), [game, now])
 
   async function handleSubmit() {
+    if (!game?.today) {
+      setMessage('Nenhum misterio foi publicado hoje.')
+      return
+    }
+
     if (!guess.trim()) {
       setMessage('Escreva algo primeiro.')
       return
@@ -230,7 +239,7 @@ function App() {
             name: nickname,
             attempts: response.attempts,
             solved: response.solved,
-            hintsUsed: unlockedCount,
+            hintsUsed: game.player?.hintsUsed ?? 0,
           },
         })
       }
@@ -243,6 +252,39 @@ function App() {
       setMessage(submitError instanceof Error ? submitError.message : 'Falha ao responder.')
     } finally {
       setBusy(false)
+    }
+  }
+
+  async function handleRevealHint(index: number) {
+    if (!game?.today || revealingHint) {
+      return
+    }
+
+    const today = game.today
+
+    try {
+      setRevealingHint(true)
+      const response = await revealHint({
+        playerId,
+        nickname,
+        mysteryId: today.id,
+        hintIndex: index,
+      })
+
+      setGame({
+        ...game,
+        player: {
+          playerId,
+          name: nickname,
+          attempts: game.player?.attempts ?? 0,
+          solved: game.player?.solved ?? false,
+          hintsUsed: response.hintsUsed,
+        },
+      })
+    } catch (revealError) {
+      setMessage(revealError instanceof Error ? revealError.message : 'Falha ao revelar a dica.')
+    } finally {
+      setRevealingHint(false)
     }
   }
 
@@ -368,6 +410,7 @@ function App() {
   }
 
   const solved = Boolean(game?.player?.solved)
+  const revealedCount = Math.min(game?.player?.hintsUsed ?? 0, unlockedCount)
 
   return (
     <main className="min-h-screen bg-[radial-gradient(circle_at_top,rgba(120,113,108,0.15),transparent_30%),linear-gradient(180deg,#09090b_0%,#111111_45%,#09090b_100%)] text-zinc-100">
@@ -393,6 +436,8 @@ function App() {
 
       {game ? (
         <>
+          {game.today ? (
+            <>
           <section className="mx-auto grid max-w-6xl gap-4 px-4 pb-6 sm:px-6 sm:pb-10 lg:grid-cols-[1.2fr_0.8fr]">
             <div className="space-y-4">
               <MysteryCard mystery={game.today} />
@@ -431,14 +476,40 @@ function App() {
           </section>
 
           <section className="mx-auto grid max-w-6xl gap-4 px-4 pb-8 sm:px-6 sm:pb-12 lg:grid-cols-[1fr_0.9fr]">
-            <HintList hints={game.today.tips} nextHintLabel={nextHintLabel} unlockedCount={unlockedCount} />
+            <HintList
+              hints={game.today.tips}
+              nextHintLabel={nextHintLabel}
+              onReveal={(index) => void handleRevealHint(index)}
+              revealedCount={revealedCount}
+              unlockedCount={unlockedCount}
+            />
             {game.yesterday ? <YesterdayMystery mystery={game.yesterday} /> : null}
           </section>
+            </>
+          ) : (
+            <section className="mx-auto grid max-w-6xl gap-4 px-4 pb-8 sm:px-6 sm:pb-12 lg:grid-cols-[1.1fr_0.9fr]">
+              <section className="rounded-[2rem] border border-zinc-800 bg-zinc-900/65 p-5 sm:p-6">
+                <p className="text-[11px] uppercase tracking-[0.45em] text-zinc-500">hoje</p>
+                <h2 className="mt-3 text-3xl font-semibold text-zinc-50">Nenhum misterio foi publicado hoje.</h2>
+                <p className="mt-3 max-w-xl text-sm leading-6 text-zinc-400">
+                  O arquivo ainda nao foi aberto. Quando o proximo entrar no ar, ele aparece aqui.
+                </p>
+                {game.tomorrow ? (
+                  <div className="mt-6 rounded-2xl border border-zinc-800 bg-zinc-950/60 p-4">
+                    <p className="text-[11px] uppercase tracking-[0.35em] text-zinc-500">proximo</p>
+                    <p className="mt-2 text-lg font-semibold text-zinc-50">{game.tomorrow.title}</p>
+                    <p className="mt-2 text-sm text-zinc-400">{game.tomorrow.date}</p>
+                  </div>
+                ) : null}
+              </section>
+              {game.yesterday ? <YesterdayMystery mystery={game.yesterday} /> : null}
+            </section>
+          )}
 
           <footer className="mx-auto flex max-w-6xl items-center justify-between px-4 pb-8 text-xs uppercase tracking-[0.3em] text-zinc-600 sm:px-6">
             <p>powered by vitrinum</p>
             <div className="text-right">
-              <p>{solved ? game.today.explanation : 'O misterio ainda respira.'}</p>
+              <p>{solved && game.today ? game.today.explanation : 'O misterio ainda respira.'}</p>
               <p className="mt-2 text-[10px] tracking-[0.28em] text-zinc-700">{buildLabel}</p>
             </div>
           </footer>

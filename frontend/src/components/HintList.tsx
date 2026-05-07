@@ -4,9 +4,11 @@ type HintListProps = {
   hints: Hint[]
   unlockedCount: number
   nextHintLabel: string | null
+  revealedCount: number
+  onReveal: (index: number) => void
 }
 
-function HintList({ hints, unlockedCount, nextHintLabel }: HintListProps) {
+function HintList({ hints, unlockedCount, nextHintLabel, revealedCount, onReveal }: HintListProps) {
   return (
     <section id="dicas" className="rounded-[2rem] border border-zinc-800 bg-zinc-900/65 p-4 sm:p-5">
       <div className="flex items-start justify-between gap-4">
@@ -29,6 +31,7 @@ function HintList({ hints, unlockedCount, nextHintLabel }: HintListProps) {
       <div className="mt-4 grid gap-3">
         {hints.map((hint, index) => {
           const unlocked = index < unlockedCount
+          const revealed = index < revealedCount
 
           return (
             <article
@@ -41,9 +44,24 @@ function HintList({ hints, unlockedCount, nextHintLabel }: HintListProps) {
                 <p className="text-[11px] uppercase tracking-[0.28em] text-zinc-600">dica {index + 1}</p>
                 <p className={`text-xs ${unlocked ? 'text-amber-200' : 'text-zinc-600'}`}>{hint.unlockAt}</p>
               </div>
-              <p className={`mt-3 text-sm leading-6 ${unlocked ? 'text-zinc-300' : 'text-zinc-600'}`}>
-                {unlocked ? hint.text : 'Dica bloqueada. O misterio ainda respira.'}
-              </p>
+              {unlocked ? (
+                revealed ? (
+                  <p className="mt-3 text-sm leading-6 text-zinc-300">{hint.text}</p>
+                ) : (
+                  <div className="mt-3">
+                    <p className="text-sm text-zinc-500">Dica liberada. Clique para revelar.</p>
+                    <button
+                      className="mt-3 rounded-full border border-amber-200/30 px-4 py-2 text-xs uppercase tracking-[0.24em] text-amber-200 hover:border-amber-100"
+                      onClick={() => onReveal(index)}
+                      type="button"
+                    >
+                      Revelar
+                    </button>
+                  </div>
+                )
+              ) : (
+                <p className="mt-3 text-sm leading-6 text-zinc-600">Dica bloqueada. O misterio ainda respira.</p>
+              )}
             </article>
           )
         })}

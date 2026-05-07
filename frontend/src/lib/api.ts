@@ -35,6 +35,13 @@ export function submitGuess(payload: { playerId: string; nickname: string; guess
   })
 }
 
+export function revealHint(payload: { playerId: string; nickname: string; mysteryId: string; hintIndex: number }) {
+  return request<{ hintsUsed: number }>('/api/game/reveal-hint', {
+    method: 'POST',
+    body: JSON.stringify(payload),
+  })
+}
+
 export function adminLogin(token: string) {
   return request<AdminSessionResponse>('/api/admin/login', {
     method: 'POST',

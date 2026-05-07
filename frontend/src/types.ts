@@ -33,7 +33,7 @@ export type PlayerState = {
 }
 
 export type GamePayload = {
-  today: PublicMystery
+  today: PublicMystery | null
   leaderboard: LeaderboardEntry[]
   player: PlayerState | null
   yesterday: YesterdayMystery | null
