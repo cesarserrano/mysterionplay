@@ -7,6 +7,8 @@ import YesterdayMystery from './components/YesterdayMystery'
 import { getTodaysMystery, getYesterdayMystery } from './data/mysteries'
 import { isAcceptedAnswer } from './utils/normalizeAnswer'
 
+const buildLabel = `v${__APP_VERSION__}-${__APP_COMMIT__}`
+
 function getUnlockDate(dateKey: string, time: string) {
   return new Date(`${dateKey}T${time}:00`)
 }
@@ -118,7 +120,10 @@ function App() {
 
       <footer className="mx-auto flex max-w-6xl items-center justify-between px-4 pb-8 text-xs uppercase tracking-[0.3em] text-zinc-600 sm:px-6">
         <p>powered by vitrinum</p>
-        <p>{solved ? todayMystery.explanation : 'Ainda nao.'}</p>
+        <div className="text-right">
+          <p>{solved ? todayMystery.explanation : 'Ainda nao.'}</p>
+          <p className="mt-2 text-[10px] tracking-[0.28em] text-zinc-700">{buildLabel}</p>
+        </div>
       </footer>
     </main>
   )
