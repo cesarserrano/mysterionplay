@@ -513,6 +513,11 @@ function App() {
               <p className="mt-2 text-[10px] tracking-[0.28em] text-zinc-700">{buildLabel}</p>
             </div>
           </footer>
+          <div className="mx-auto max-w-6xl px-4 pb-10 sm:px-6">
+            <p className="max-w-2xl text-[10px] leading-5 tracking-[0.22em] text-zinc-700/35">
+              MysterionPlay e uma experiencia diaria de misterio e deducao baseada em imagens e pistas liberadas ao longo do dia.
+            </p>
+          </div>
         </>
       ) : (
         <div className="mx-auto max-w-6xl px-4 py-16 text-sm text-zinc-500 sm:px-6">Carregando o misterio.</div>
