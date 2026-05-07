@@ -1,0 +1,9 @@
+services:
+
+  frontend:
+    build: ./frontend
+    container_name: mysterion_frontend
+    restart: unless-stopped
+
+    ports:
+      - "3000:80"
