@@ -44,6 +44,7 @@ function AdminPanel({
   const [selectedId, setSelectedId] = useState(mysteries[0]?.id ?? 'new')
   const [draft, setDraft] = useState<AdminMystery>(mysteries[0] ?? emptyMystery())
   const [status, setStatus] = useState('Pronto.')
+  const [busy, setBusy] = useState(false)
   const loadSubmissionsRef = useRef(onLoadSubmissions)
 
   useEffect(() => {
@@ -60,6 +61,9 @@ function AdminPanel({
   const isNew = selectedId === 'new' || selectedMystery === null
 
   async function handleSave() {
+    setBusy(true)
+    setStatus('Salvando...')
+
     const payload: AdminMystery = {
       ...draft,
       aliases: draft.aliases.map((alias) => alias.trim()).filter(Boolean),
@@ -69,14 +73,20 @@ function AdminPanel({
       })),
     }
 
-    if (isNew) {
-      await onCreate(payload)
-      setStatus('Misterio criado.')
-      return
-    }
+    try {
+      if (isNew) {
+        await onCreate(payload)
+        setStatus('Misterio criado.')
+        return
+      }
 
-    await onUpdate(payload)
-    setStatus('Misterio salvo.')
+      await onUpdate(payload)
+      setStatus('Misterio salvo.')
+    } catch (error) {
+      setStatus(error instanceof Error ? error.message : 'Falha ao salvar misterio.')
+    } finally {
+      setBusy(false)
+    }
   }
 
   return (
@@ -142,11 +152,21 @@ function AdminPanel({
               </div>
               {!isNew ? (
                 <button
-                  className="rounded-2xl border border-red-500/30 px-4 py-2 text-sm text-red-200 hover:border-red-400"
+                  className="rounded-2xl border border-red-500/30 px-4 py-2 text-sm text-red-200 hover:border-red-400 disabled:opacity-60"
+                  disabled={busy}
                   onClick={async () => {
-                    await onDelete(draft.id)
-                    setSelectedId('new')
-                    setStatus('Misterio removido.')
+                    try {
+                      setBusy(true)
+                      setStatus('Excluindo...')
+                      await onDelete(draft.id)
+                      setSelectedId('new')
+                      setDraft(emptyMystery())
+                      setStatus('Misterio removido.')
+                    } catch (error) {
+                      setStatus(error instanceof Error ? error.message : 'Falha ao excluir misterio.')
+                    } finally {
+                      setBusy(false)
+                    }
                   }}
                   type="button"
                 >
@@ -258,16 +278,29 @@ function AdminPanel({
 
             <div className="mt-5 flex flex-wrap gap-3">
               <button
-                className="rounded-2xl bg-amber-200 px-5 py-3 text-sm font-medium text-zinc-950 hover:bg-amber-100"
+                className="rounded-2xl bg-amber-200 px-5 py-3 text-sm font-medium text-zinc-950 hover:bg-amber-100 disabled:opacity-60"
+                disabled={busy}
                 onClick={() => void handleSave()}
                 type="button"
               >
-                {isNew ? 'Criar misterio' : 'Salvar misterio'}
+                {busy ? 'Processando...' : isNew ? 'Criar misterio' : 'Salvar misterio'}
               </button>
               {!isNew ? (
                 <button
-                  className="rounded-2xl border border-zinc-700 px-5 py-3 text-sm text-zinc-300 hover:border-zinc-400"
-                  onClick={() => void onResetSubmissions(draft.id)}
+                  className="rounded-2xl border border-zinc-700 px-5 py-3 text-sm text-zinc-300 hover:border-zinc-400 disabled:opacity-60"
+                  disabled={busy}
+                  onClick={async () => {
+                    try {
+                      setBusy(true)
+                      setStatus('Resetando ranking...')
+                      await onResetSubmissions(draft.id)
+                      setStatus('Ranking resetado.')
+                    } catch (error) {
+                      setStatus(error instanceof Error ? error.message : 'Falha ao resetar ranking.')
+                    } finally {
+                      setBusy(false)
+                    }
+                  }}
                   type="button"
                 >
                   Resetar ranking
