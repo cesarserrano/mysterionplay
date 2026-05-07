@@ -9,6 +9,10 @@ const packageJson = JSON.parse(readFileSync(new URL('./package.json', import.met
 }
 
 function getCommitHash() {
+  if (process.env.APP_COMMIT) {
+    return process.env.APP_COMMIT
+  }
+
   try {
     return execSync('git rev-parse --short HEAD', { stdio: ['ignore', 'pipe', 'ignore'] }).toString().trim()
   } catch {
@@ -16,9 +20,13 @@ function getCommitHash() {
   }
 }
 
+function getAppVersion() {
+  return process.env.APP_VERSION ?? packageJson.version
+}
+
 export default defineConfig({
   define: {
-    __APP_VERSION__: JSON.stringify(packageJson.version),
+    __APP_VERSION__: JSON.stringify(getAppVersion()),
     __APP_COMMIT__: JSON.stringify(getCommitHash()),
   },
   plugins: [react(), tailwindcss()],
