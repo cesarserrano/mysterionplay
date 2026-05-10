@@ -67,3 +67,23 @@ export type AdminSubmission = {
 export type AdminSessionResponse = {
   ok: true
 }
+
+export type SocialPost = {
+  id: string
+  mysteryId: string
+  date: string
+  time: string
+  platform: 'x' | 'instagram_feed' | 'instagram_story' | 'tiktok'
+  type: 'main' | 'hint_1' | 'hint_final' | 'stat' | 'mid_hint' | 'ranking' | 'atmosphere'
+  status: 'draft' | 'ready' | 'posted' | 'skipped'
+  text: string
+  imageUrl?: string
+  link?: string
+  createdAt: string
+  updatedAt: string
+}
+
+export type SocialPlanResponse = {
+  date: string
+  posts: SocialPost[]
+}

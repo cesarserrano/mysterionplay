@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import type { AdminMystery, AdminSubmission } from '../types'
+import SocialRitual from './SocialRitual'
 
 type AdminPanelProps = {
   mysteries: AdminMystery[]
@@ -47,7 +48,11 @@ function AdminPanel({
   const [draft, setDraft] = useState<AdminMystery>(mysteries[0] ?? emptyMystery())
   const [status, setStatus] = useState('Pronto.')
   const [busy, setBusy] = useState(false)
+  const [activeTab, setActiveTab] = useState<'mysteries' | 'social'>('mysteries')
   const loadSubmissionsRef = useRef(onLoadSubmissions)
+
+  const dateKey = getDateKey()
+  const todayMystery = mysteries.find((m) => m.date === dateKey)
 
   useEffect(() => {
     loadSubmissionsRef.current = onLoadSubmissions
@@ -93,21 +98,49 @@ function AdminPanel({
 
   return (
     <main className="min-h-screen bg-zinc-950 text-zinc-100">
-      <header className="mx-auto flex max-w-6xl items-center justify-between px-4 py-5 sm:px-6">
-        <div>
-          <p className="text-[11px] uppercase tracking-[0.45em] text-zinc-500">admin</p>
-          <h1 className="mt-2 text-2xl font-semibold text-zinc-50">Sala de controle</h1>
+      <header className="mx-auto flex max-w-6xl flex-col gap-4 px-4 py-5 sm:px-6">
+        <div className="flex items-center justify-between">
+          <div>
+            <p className="text-[11px] uppercase tracking-[0.45em] text-zinc-500">admin</p>
+            <h1 className="mt-2 text-2xl font-semibold text-zinc-50">Sala de controle</h1>
+          </div>
+          <button
+            className="rounded-2xl border border-zinc-700 px-4 py-2 text-sm text-zinc-300 hover:border-zinc-400"
+            onClick={onLogout}
+            type="button"
+          >
+            Sair
+          </button>
         </div>
-        <button
-          className="rounded-2xl border border-zinc-700 px-4 py-2 text-sm text-zinc-300 hover:border-zinc-400"
-          onClick={onLogout}
-          type="button"
-        >
-          Sair
-        </button>
+
+        <div className="flex gap-2">
+          <button
+            className={`rounded-2xl px-4 py-2 text-sm uppercase tracking-wider transition-colors ${
+              activeTab === 'mysteries'
+                ? 'border border-amber-200/40 bg-amber-200/10 text-amber-200'
+                : 'border border-zinc-700 text-zinc-400 hover:border-zinc-600'
+            }`}
+            onClick={() => setActiveTab('mysteries')}
+            type="button"
+          >
+            Misterios
+          </button>
+          <button
+            className={`rounded-2xl px-4 py-2 text-sm uppercase tracking-wider transition-colors ${
+              activeTab === 'social'
+                ? 'border border-purple-200/40 bg-purple-200/10 text-purple-200'
+                : 'border border-zinc-700 text-zinc-400 hover:border-zinc-600'
+            }`}
+            onClick={() => setActiveTab('social')}
+            type="button"
+          >
+            Ritual Social
+          </button>
+        </div>
       </header>
 
-      <section className="mx-auto grid max-w-6xl gap-4 px-4 pb-8 sm:px-6 lg:grid-cols-[320px_1fr]">
+      {activeTab === 'mysteries' ? (
+        <section className="mx-auto grid max-w-6xl gap-4 px-4 pb-8 sm:px-6 lg:grid-cols-[320px_1fr]">
         <aside className="rounded-[2rem] border border-zinc-800 bg-zinc-900/65 p-4">
           <div className="flex items-center justify-between gap-3">
             <h2 className="text-sm uppercase tracking-[0.35em] text-zinc-500">misterios</h2>
@@ -358,9 +391,29 @@ function AdminPanel({
             </div>
           </section>
         </div>
-      </section>
+        </section>
+      ) : (
+        <section className="mx-auto max-w-6xl px-4 pb-8 sm:px-6">
+          <SocialRitual 
+            dateKey={dateKey} 
+            mysteryTitle={todayMystery?.title ?? 'Nenhum mistério para hoje'} 
+          />
+        </section>
+      )}
     </main>
   )
+}
+
+function getDateKey() {
+  const formatter = new Intl.DateTimeFormat('en-CA', {
+    timeZone: 'America/Sao_Paulo',
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+  })
+
+  const parts = Object.fromEntries(formatter.formatToParts(new Date()).map((part) => [part.type, part.value]))
+  return `${parts.year}-${parts.month}-${parts.day}`
 }
 
 export default AdminPanel

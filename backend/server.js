@@ -121,6 +121,23 @@ async function migrate() {
       UNIQUE (mystery_id, player_id)
     )
   `)
+
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS social_posts (
+      id TEXT PRIMARY KEY,
+      mystery_id TEXT NOT NULL REFERENCES mysteries(id) ON DELETE CASCADE,
+      date TEXT NOT NULL,
+      time TEXT NOT NULL,
+      platform TEXT NOT NULL,
+      type TEXT NOT NULL,
+      status TEXT NOT NULL DEFAULT 'draft',
+      text TEXT NOT NULL,
+      image_url TEXT,
+      link TEXT,
+      created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+      updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    )
+  `)
 }
 
 async function seedDatabaseIfNeeded() {
@@ -334,6 +351,245 @@ async function getSubmission(mysteryId, playerId) {
   )
   return result.rows[0] ?? null
 }
+
+function generateSocialPosts(mystery, dateKey) {
+  const posts = []
+  const baseUrl = 'https://mysterionplay.com.br'
+
+  // Helper para criar post
+  const createPost = (time, type, platform, text) => ({
+    id: `${mystery.id}-${dateKey}-${time}-${platform}`,
+    mysteryId: mystery.id,
+    date: dateKey,
+    time,
+    platform,
+    type,
+    status: 'draft',
+    text,
+    imageUrl: null,
+    link: baseUrl,
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+  })
+
+  // 00:00 - Main post (obrigatório)
+  posts.push(
+    createPost(
+      '00:00',
+      'main',
+      'x',
+      `Mistério #${mystery.id} disponível.
+
+A frequência está morta.
+
+${baseUrl}`,
+    ),
+  )
+
+  posts.push(
+    createPost(
+      '00:00',
+      'main',
+      'instagram_feed',
+      `Mistério #${mystery.id}
+
+A frequência está morta.`,
+    ),
+  )
+
+  // 09:00 - First hint (obrigatório)
+  const firstHint = mystery.tips.find((tip) => tip.unlockAt === '09:00')
+  if (firstHint) {
+    posts.push(
+      createPost(
+        '09:00',
+        'hint_1',
+        'x',
+        `A maioria ainda está olhando para as televisões.
+
+${firstHint.text.substring(0, 150)}`,
+      ),
+    )
+
+    posts.push(
+      createPost(
+        '09:00',
+        'hint_1',
+        'instagram_story',
+        `${firstHint.text.substring(0, 100)}`,
+      ),
+    )
+  } else {
+    posts.push(
+      createPost('09:00', 'hint_1', 'x', 'A maioria ainda está olhando para as televisões.'),
+    )
+  }
+
+  // 21:00 - Last hint (obrigatório)
+  const lastHint = mystery.tips[mystery.tips.length - 1] ?? mystery.tips[0]
+  if (lastHint) {
+    posts.push(
+      createPost(
+        '21:00',
+        'hint_final',
+        'x',
+        `21:00
+
+Ainda há tempo.
+
+${lastHint.text.substring(0, 100)}`,
+      ),
+    )
+
+    posts.push(
+      createPost(
+        '21:00',
+        'hint_final',
+        'instagram_story',
+        `Última chance.
+
+${lastHint.text.substring(0, 80)}`,
+      ),
+    )
+  } else {
+    posts.push(createPost('21:00', 'hint_final', 'x', '21:00\n\nAinda há tempo.'))
+  }
+
+  // 12:00 - Optional stat/observation
+  const secondHint = mystery.tips.find((tip) => tip.unlockAt === '12:00')
+  if (secondHint) {
+    posts.push(
+      createPost(
+        '12:00',
+        'stat',
+        'x',
+        `${secondHint.text.substring(0, 120)}
+
+Sem pressa.`,
+      ),
+    )
+  }
+
+  // 15:00 - Optional mid hint
+  const midHint = mystery.tips.find((tip) => tip.unlockAt === '15:00')
+  if (midHint) {
+    posts.push(
+      createPost(
+        '15:00',
+        'mid_hint',
+        'x',
+        `Caminho do meio.
+
+${midHint.text.substring(0, 100)}`,
+      ),
+    )
+  }
+
+  // 18:00 - Optional ranking/atmosphere
+  const thirdHint = mystery.tips.find((tip) => tip.unlockAt === '18:00')
+  if (thirdHint) {
+    posts.push(
+      createPost(
+        '18:00',
+        'ranking',
+        'x',
+        `${thirdHint.text.substring(0, 100)}
+
+A noite se aproxima.`,
+      ),
+    )
+  }
+
+  return posts
+}
+
+async function getOrCreateSocialPlan(dateKey) {
+  const allMysteries = await getAllMysteries()
+  const timeline = getTimeline(allMysteries, dateKey)
+
+  if (!timeline.today) {
+    return null
+  }
+
+  const mystery = timeline.today
+  const existing = await pool.query(
+    'SELECT * FROM social_posts WHERE mystery_id = $1 AND date = $2',
+    [mystery.id, dateKey],
+  )
+
+  if (existing.rowCount > 0) {
+    return existing.rows.map((row) => ({
+      id: row.id,
+      mysteryId: row.mystery_id,
+      date: row.date,
+      time: row.time,
+      platform: row.platform,
+      type: row.type,
+      status: row.status,
+      text: row.text,
+      imageUrl: row.image_url,
+      link: row.link,
+      createdAt: row.created_at,
+      updatedAt: row.updated_at,
+    }))
+  }
+
+  // Generate new posts
+  const posts = generateSocialPosts(mystery, dateKey)
+
+  // Save to database
+  for (const post of posts) {
+    await pool.query(
+      `
+        INSERT INTO social_posts (id, mystery_id, date, time, platform, type, status, text, image_url, link, created_at, updated_at)
+        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
+      `,
+      [
+        post.id,
+        post.mysteryId,
+        post.date,
+        post.time,
+        post.platform,
+        post.type,
+        post.status,
+        post.text,
+        post.imageUrl,
+        post.link,
+        post.createdAt,
+        post.updatedAt,
+      ],
+    )
+  }
+
+  return posts
+}
+
+async function getSocialPlan(dateKey) {
+  const result = await pool.query(
+    `
+      SELECT * FROM social_posts
+      WHERE date = $1
+      ORDER BY time ASC, platform ASC
+    `,
+    [dateKey],
+  )
+
+  return result.rows.map((row) => ({
+    id: row.id,
+    mysteryId: row.mystery_id,
+    date: row.date,
+    time: row.time,
+    platform: row.platform,
+    type: row.type,
+    status: row.status,
+    text: row.text,
+    imageUrl: row.image_url,
+    link: row.link,
+    createdAt: row.created_at,
+    updatedAt: row.updated_at,
+  }))
+}
+
 
 app.get('/api/health', (_req, res) => {
   res.json({ ok: true })
@@ -674,6 +930,70 @@ app.delete('/api/admin/mysteries/:id', requireAdmin, async (req, res) => {
 app.post('/api/admin/mysteries/:id/reset-submissions', requireAdmin, async (req, res) => {
   await pool.query('DELETE FROM submissions WHERE mystery_id = $1', [String(req.params.id)])
   res.json({ ok: true })
+})
+
+// Social rituals endpoints
+app.get('/api/social/today', async (_req, res) => {
+  const { dateKey } = getZonedParts()
+  const posts = await getSocialPlan(dateKey)
+
+  if (posts.length === 0) {
+    const generated = await getOrCreateSocialPlan(dateKey)
+    if (!generated) {
+      res.status(404).json({ error: 'Nenhum misterio para hoje.' })
+      return
+    }
+    res.json({ date: dateKey, posts: generated })
+    return
+  }
+
+  res.json({ date: dateKey, posts })
+})
+
+app.get('/api/social/:date', async (req, res) => {
+  const dateParam = String(req.params.date ?? '').trim()
+  const dateRegex = /^\d{4}-\d{2}-\d{2}$/
+
+  if (!dateRegex.test(dateParam)) {
+    res.status(400).json({ error: 'Data invalida. Use YYYY-MM-DD.' })
+    return
+  }
+
+  const posts = await getSocialPlan(dateParam)
+
+  if (posts.length === 0) {
+    const generated = await getOrCreateSocialPlan(dateParam)
+    if (!generated) {
+      res.status(404).json({ error: 'Nenhum misterio para essa data.' })
+      return
+    }
+    res.json({ date: dateParam, posts: generated })
+    return
+  }
+
+  res.json({ date: dateParam, posts })
+})
+
+app.post('/api/social/generate/:date', requireAdmin, async (req, res) => {
+  const dateParam = String(req.params.date ?? '').trim()
+  const dateRegex = /^\d{4}-\d{2}-\d{2}$/
+
+  if (!dateRegex.test(dateParam)) {
+    res.status(400).json({ error: 'Data invalida. Use YYYY-MM-DD.' })
+    return
+  }
+
+  // Delete existing posts for this date
+  await pool.query('DELETE FROM social_posts WHERE date = $1', [dateParam])
+
+  // Generate new ones
+  const generated = await getOrCreateSocialPlan(dateParam)
+  if (!generated) {
+    res.status(404).json({ error: 'Nenhum misterio para essa data.' })
+    return
+  }
+
+  res.json({ date: dateParam, posts: generated })
 })
 
 async function bootstrap() {
