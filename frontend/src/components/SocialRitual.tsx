@@ -199,7 +199,7 @@ function SocialRitual({ dateKey, mysteryTitle }: SocialRitualProps) {
                 <div className="space-y-3">
                   {posts.map((post) => {
                     const isEditing = editingPostId === post.id
-                    const displayPost = isEditing ? editData : post
+                    const displayPost: SocialPost = isEditing ? { ...post, ...editData } : post
 
                     return (
                       <div
