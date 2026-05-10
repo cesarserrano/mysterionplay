@@ -143,6 +143,18 @@ async function migrate() {
       updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
     )
   `)
+
+  await pool.query(`
+    ALTER TABLE social_posts
+      ADD COLUMN IF NOT EXISTS image_url TEXT,
+      ADD COLUMN IF NOT EXISTS link TEXT,
+      ADD COLUMN IF NOT EXISTS publish_mode TEXT NOT NULL DEFAULT 'manual',
+      ADD COLUMN IF NOT EXISTS posted_at TIMESTAMPTZ,
+      ADD COLUMN IF NOT EXISTS posted_by TEXT,
+      ADD COLUMN IF NOT EXISTS external_post_id TEXT,
+      ADD COLUMN IF NOT EXISTS error_message TEXT,
+      ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+  `)
 }
 
 async function seedDatabaseIfNeeded() {
