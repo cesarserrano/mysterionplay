@@ -48,13 +48,30 @@ Imagens enviadas pelo admin saem em /api/uploads/...
 - **GET /api/social/today** - Retorna plano social do dia (gera automaticamente se não existir)
 - **GET /api/social/:date** - Retorna plano social de uma data específica (formato: YYYY-MM-DD)
 - **POST /api/social/generate/:date** - Gera/regenera plano social de uma data (requer ADMIN_TOKEN)
+- **PUT /api/social/:id** - Atualiza status/informações de um post (requer ADMIN_TOKEN)
 
 ### Acessar no Admin
 1. Vá para /admin
 2. Clique na aba "Ritual Social"
 3. Visualize os posts gerados para o dia
-4. Use o botão "Copiar texto" para copiar cada post
-5. Indicadores mostram quais posts são obrigatórios (00:00, 09:00, 21:00)
+4. Use o botão "Copiar" para copiar cada post
+5. Clique em "Status" para mudar o status e registrar publicação
+
+### Gerenciamento Manual de Status
+
+Cada post pode ter um dos 4 status:
+
+| Status | Cor | Significado |
+|--------|-----|-------------|
+| **draft** | Cinza | Rascunho, não pronto |
+| **ready** | Âmbar | Pronto para publicar |
+| **posted** | Verde | Já foi publicado |
+| **skipped** | Slate | Pulado/cancelado |
+
+Ao marcar como **posted**, você pode:
+- Registrar quem publicou (opcional)
+- Sistema salva automaticamente data/hora de publicação
+- Se tiver ID externo, registrar também
 
 ### Estrutura de Posts
 Cada post contém:
@@ -62,9 +79,12 @@ Cada post contém:
 - **platform**: x, instagram_feed, instagram_story, tiktok
 - **type**: main, hint_1, hint_final, stat, mid_hint, ranking
 - **status**: draft, ready, posted, skipped
-- **text**: Conteúdo do post em tom noir/atmosférico
-- **link**: URL para mysterionplay.com.br
-- **imageUrl**: Opcional, para imagens
+- **publishMode**: manual (futuramente: automatic)
+- **text**: Conteúdo do post
+- **postedAt**: Timestamp de quando foi publicado
+- **postedBy**: Quem publicou (manual ou username do bot)
+- **externalPostId**: ID do post na plataforma (futura integração)
+- **errorMessage**: Se houve erro na publicação automática
 
 ### Ritual Diário
 - **00:00** (Obrigatório) - Post principal para X/Twitter e Instagram Feed
@@ -74,6 +94,22 @@ Cada post contém:
 - **15:00** (Opcional) - Dica intermediária
 - **18:00** (Opcional) - Ranking/parcial/atmosfera
 
+### Workflow Atual (Manual)
+1. Sistema gera posts automaticamente ao acessar /admin
+2. Admin visualiza o plano do dia no "Ritual Social"
+3. Admin copia texto de cada post
+4. Admin publica manualmente em X/Instagram/TikTok
+5. Volta ao admin e marca post como "posted"
+6. Sistema registra horário e autor da publicação
+
+### Futura Integração Automática
+Quando integrarmos APIs:
+1. Posts terão `publishMode: "automatic"`
+2. Sistema publicará nos horários corretos
+3. IDs externos salvos em `externalPostId`
+4. Histórico completo mantido em `postedAt` / `postedBy` / `status`
+5. Diferenciação clara entre posts manuais e automáticos
+
 ### Tone Guidelines
 Os textos são gerados automaticamente com o tom do projeto:
 - Frases curtas
@@ -81,11 +117,3 @@ Os textos são gerados automaticamente com o tom do projeto:
 - Arquivo digital, internet antiga
 - Sem CTA agressivo
 - Sem "venha jogar", "viral", "desafie amigos", emojis excessivos
-
-### Futura Integração
-O sistema está pronto para integração com APIs externas:
-1. Implementar conectores para X, Instagram, TikTok
-2. Adicionar campo `accountId` a cada post
-3. Usar endpoints POST para publicar automaticamente
-4. Manter histórico em status "posted"
-5. Configurar scheduler para publicar nos horários corretos

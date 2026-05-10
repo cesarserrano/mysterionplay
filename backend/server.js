@@ -134,6 +134,11 @@ async function migrate() {
       text TEXT NOT NULL,
       image_url TEXT,
       link TEXT,
+      publish_mode TEXT NOT NULL DEFAULT 'manual',
+      posted_at TIMESTAMPTZ,
+      posted_by TEXT,
+      external_post_id TEXT,
+      error_message TEXT,
       created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
       updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
     )
@@ -541,8 +546,8 @@ async function getOrCreateSocialPlan(dateKey) {
   for (const post of posts) {
     await pool.query(
       `
-        INSERT INTO social_posts (id, mystery_id, date, time, platform, type, status, text, image_url, link, created_at, updated_at)
-        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
+        INSERT INTO social_posts (id, mystery_id, date, time, platform, type, status, text, image_url, link, publish_mode, created_at, updated_at)
+        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
       `,
       [
         post.id,
@@ -555,6 +560,7 @@ async function getOrCreateSocialPlan(dateKey) {
         post.text,
         post.imageUrl,
         post.link,
+        'manual',
         post.createdAt,
         post.updatedAt,
       ],
@@ -585,9 +591,66 @@ async function getSocialPlan(dateKey) {
     text: row.text,
     imageUrl: row.image_url,
     link: row.link,
+    publishMode: row.publish_mode,
+    postedAt: row.posted_at,
+    postedBy: row.posted_by,
+    externalPostId: row.external_post_id,
+    errorMessage: row.error_message,
     createdAt: row.created_at,
     updatedAt: row.updated_at,
   }))
+}
+
+async function updateSocialPostStatus(postId, update) {
+  const result = await pool.query(
+    `
+      UPDATE social_posts
+      SET 
+        status = COALESCE($2, status),
+        publish_mode = COALESCE($3, publish_mode),
+        posted_at = COALESCE($4, posted_at),
+        posted_by = COALESCE($5, posted_by),
+        external_post_id = COALESCE($6, external_post_id),
+        error_message = COALESCE($7, error_message),
+        updated_at = NOW()
+      WHERE id = $1
+      RETURNING *
+    `,
+    [
+      postId,
+      update.status,
+      update.publishMode,
+      update.postedAt,
+      update.postedBy,
+      update.externalPostId,
+      update.errorMessage,
+    ],
+  )
+
+  if (result.rowCount === 0) {
+    return null
+  }
+
+  const row = result.rows[0]
+  return {
+    id: row.id,
+    mysteryId: row.mystery_id,
+    date: row.date,
+    time: row.time,
+    platform: row.platform,
+    type: row.type,
+    status: row.status,
+    text: row.text,
+    imageUrl: row.image_url,
+    link: row.link,
+    publishMode: row.publish_mode,
+    postedAt: row.posted_at,
+    postedBy: row.posted_by,
+    externalPostId: row.external_post_id,
+    errorMessage: row.error_message,
+    createdAt: row.created_at,
+    updatedAt: row.updated_at,
+  }
 }
 
 
@@ -994,6 +1057,32 @@ app.post('/api/social/generate/:date', requireAdmin, async (req, res) => {
   }
 
   res.json({ date: dateParam, posts: generated })
+})
+
+app.put('/api/social/:id', requireAdmin, async (req, res) => {
+  const postId = String(req.params.id ?? '').trim()
+  const { status, publishMode, postedAt, postedBy, externalPostId, errorMessage } = req.body ?? {}
+
+  if (!postId) {
+    res.status(400).json({ error: 'ID do post invalido.' })
+    return
+  }
+
+  const updated = await updateSocialPostStatus(postId, {
+    status: status ? String(status).trim() : undefined,
+    publishMode: publishMode ? String(publishMode).trim() : undefined,
+    postedAt: postedAt ? new Date(postedAt).toISOString() : undefined,
+    postedBy: postedBy ? String(postedBy).trim() : undefined,
+    externalPostId: externalPostId ? String(externalPostId).trim() : undefined,
+    errorMessage: errorMessage ? String(errorMessage).trim() : undefined,
+  })
+
+  if (!updated) {
+    res.status(404).json({ error: 'Post nao encontrado.' })
+    return
+  }
+
+  res.json({ post: updated })
 })
 
 async function bootstrap() {

@@ -79,6 +79,11 @@ export type SocialPost = {
   text: string
   imageUrl?: string
   link?: string
+  publishMode: 'manual' | 'automatic'
+  postedAt?: string
+  postedBy?: string
+  externalPostId?: string
+  errorMessage?: string
   createdAt: string
   updatedAt: string
 }
