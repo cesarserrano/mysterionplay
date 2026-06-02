@@ -9,6 +9,72 @@ import {
 } from '../src/mysteryCatalog.js'
 const DEFAULT_DAYS = 60
 let disconnectPrisma: (() => Promise<void>) | undefined
+const episodeTitles = [
+  'Linha Ocupada',
+  'Arquivo Magnetico',
+  'Ruido de Conexao',
+  'Papel Continuo',
+  'Creditos Restantes',
+  'Recado Numerico',
+  'Transmissao Noturna',
+  'Senha Temporaria',
+  'Ficha de Compensacao',
+  'Depois do Expediente',
+  'Copia Carbono',
+  'Antes do Cartao',
+  'Mensagem Impressa',
+  'Tela Curva',
+  'Ultima Locacao',
+  'Favor Rebobinar',
+  'Lado B',
+  'Fones de Espuma',
+  'Faixa Interrompida',
+  'Instalacao Pendente',
+  'Capacidade Extra',
+  'Movimento Mecanico',
+  'Tecla Adicional',
+  'Interruptor Vermelho',
+  'Minutos de Reserva',
+  'Cadeira Enquadrada',
+  'Rede Vazia',
+  'Portas Numeradas',
+  'Conector Serial',
+  'Saida LPT',
+  'Bip do Caixa',
+  'Venda Nao Autorizada',
+  'Aguarde sua Senha',
+  'Numero Chamado',
+  'Data Oficial',
+  'Pagamento Autenticado',
+  'Rastro de Papel',
+  'Copias a Alcool',
+  'Transparencia Vazia',
+  'Erro Datilografico',
+  'Mensagem Gravada',
+  'Fora da Base',
+  'Compromisso Salvo',
+  'Caneta Sem Tinta',
+  'Sinal Analogico',
+  'Chamada em Rajadas',
+  'Frequencia Morta',
+  'Digitos Vermelhos',
+  'Registro de Voz',
+  'Fita Menor',
+  'Dados Perfurados',
+  'Arquivo Reduzido',
+  'Consulta Ampliada',
+  'Horario Registrado',
+  'Credito de Viagem',
+  'Trajeto de Trabalho',
+  'Secao Eleitoral',
+  'Numero Permanente',
+  'Pagina Profissional',
+  'Poucas Palavras',
+]
+
+if (episodeTitles.length !== subjects.length) {
+  throw new Error(`Expected ${subjects.length} episode titles, received ${episodeTitles.length}.`)
+}
 const IMAGE_STYLE = [
   'Brazilian digital noir',
   'analog 35mm documentary photograph',
@@ -29,6 +95,7 @@ type Options = {
   startDate: string
   days: number
   dryRun: boolean
+  syncExisting: boolean
 }
 
 function getSaoPauloDateKey(date = new Date()) {
@@ -58,7 +125,12 @@ function readOptions(): Options {
     throw new Error(`Use --days between 1 and ${subjects.length}.`)
   }
 
-  return { startDate, days, dryRun: args.includes('--dry-run') }
+  return {
+    startDate,
+    days,
+    dryRun: args.includes('--dry-run'),
+    syncExisting: args.includes('--sync-existing'),
+  }
 }
 
 function normalize(value: string) {
@@ -98,9 +170,8 @@ function difficultyFor(index: number, seed: string) {
   return Math.max(1, Math.min(5, base + (hash(seed) % 3 === 0 ? 1 : 0)))
 }
 
-function titleFor(index: number, dateKey: string) {
-  const series = ['Plantao', 'Protocolo', 'Arquivo', 'Linha Morta', 'Ultimo Turno', 'Sala de Espera']
-  return `${pick(series, dateKey, index)} ${idFromDate(dateKey)}`
+function titleFor(index: number) {
+  return episodeTitles[index]
 }
 
 function promptFor(subject: MysterySubject, dateKey: string, index: number) {
@@ -147,7 +218,7 @@ function buildSeason(options: Options) {
     return {
       id: idFromDate(date),
       date,
-      title: titleFor(index, date),
+      title: titleFor(index),
       image: 'hero',
       answer: subject.answer,
       aliases: subject.aliases,
@@ -184,7 +255,7 @@ async function generate() {
 
   if (options.dryRun) {
     console.table(
-      season.map(({ id, date, answer, difficulty }) => ({ id, date, answer, difficulty })),
+      season.map(({ id, date, title, answer, difficulty }) => ({ id, date, title, answer, difficulty })),
     )
     console.log(`Dry run complete: ${season.length} coherent mysteries prepared.`)
     return
@@ -198,6 +269,11 @@ async function generate() {
   const existingIds = new Set(existing.map((mystery) => mystery.id))
   const existingDates = new Set(existing.map((mystery) => mystery.date))
   const existingAnswers = new Set(existing.map((mystery) => normalize(mystery.answer)))
+  const matchingExisting = season.filter((mystery) =>
+    existing.some(
+      (saved) => saved.id === mystery.id && normalize(saved.answer) === normalize(mystery.answer),
+    ),
+  )
   const pending = season.filter(
     (mystery) =>
       !existingIds.has(mystery.id) &&
@@ -215,8 +291,27 @@ async function generate() {
     )
   }
 
+  if (options.syncExisting && matchingExisting.length > 0) {
+    await prisma.$transaction(
+      matchingExisting.map((mystery) =>
+        prisma.mystery.update({
+          where: { id: mystery.id },
+          data: {
+            title: mystery.title,
+            aliases: mystery.aliases,
+            difficulty: mystery.difficulty,
+            imagePrompt: mystery.imagePrompt,
+            tips: mystery.tips,
+            explanation: mystery.explanation,
+          },
+        }),
+      ),
+    )
+  }
+
   console.log(`Season window: ${season[0].date} to ${season.at(-1)?.date}.`)
   console.log(`Created ${pending.length} mysteries; skipped ${season.length - pending.length} existing records.`)
+  console.log(`Synchronized ${options.syncExisting ? matchingExisting.length : 0} generated records.`)
 }
 
 generate()
