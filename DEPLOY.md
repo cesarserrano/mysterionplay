@@ -71,6 +71,31 @@ O gerador nao sobrescreve IDs, datas ou respostas existentes. Cada imagem fica
 com `imageUrl = null` e `status = PENDING` ate um servico de imagem processar o
 `imagePrompt`.
 
+## Geracao de imagens
+
+Configure `OPENAI_API_KEY` no ambiente do Docker Compose. O worker usa
+`gpt-image-2`, salva JPEGs em `backend/uploads` e atualiza o misterio para
+`status = READY`.
+
+Revise a fila sem gerar imagens:
+
+```sh
+docker compose exec backend npm run generate:images -- --limit 3 --dry-run
+```
+
+Gere uma imagem de teste:
+
+```sh
+docker compose exec backend npm run generate:images -- --limit 1
+```
+
+Depois de conferir o resultado, processe lotes controlados ou toda a fila:
+
+```sh
+docker compose exec backend npm run generate:images -- --limit 5
+docker compose exec backend npm run generate:images -- --all
+```
+
 ## Ritual Social (Automação de Posts)
 
 ### Endpoints
