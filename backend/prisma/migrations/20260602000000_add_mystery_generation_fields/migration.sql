@@ -17,7 +17,6 @@ ALTER TABLE "mysteries"
   ADD COLUMN IF NOT EXISTS "status" TEXT NOT NULL DEFAULT 'PENDING';
 
 CREATE UNIQUE INDEX IF NOT EXISTS "mysteries_date_key" ON "mysteries"("date");
-CREATE UNIQUE INDEX IF NOT EXISTS "mysteries_answer_key" ON "mysteries"("answer");
 
 CREATE TABLE IF NOT EXISTS "submissions" (
   "id" TEXT PRIMARY KEY,

@@ -13,7 +13,7 @@ model Mystery {
   date        String       @unique
   title       String
   image       String       @default("hero")
-  answer      String       @unique
+  answer      String
   aliases     Json         @default("[]")
   tips        Json         @default("[]")
   explanation String
