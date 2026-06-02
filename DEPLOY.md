@@ -98,6 +98,38 @@ docker compose exec backend npm run generate:images -- --all
 
 ## Ritual Social (Automação de Posts)
 
+### Instagram automatico
+
+Configure `INSTAGRAM_USER_ID` e `INSTAGRAM_ACCESS_TOKEN` no `.env`. A conta deve
+ser profissional e estar habilitada para publicacao pela API da Meta.
+
+Revise a fila sem publicar:
+
+```sh
+docker compose exec backend npm run publish:social -- --limit 3 --dry-run
+```
+
+Publique apenas posts marcados como `ready` no admin:
+
+```sh
+docker compose exec backend npm run publish:social -- --limit 3
+```
+
+Para automatizar tambem a aprovacao dos rascunhos vencidos, use:
+
+```sh
+docker compose exec backend npm run publish:social -- --limit 3 --auto-approve
+```
+
+### TikTok manual assistido
+
+O TikTok exige auditoria para publicacao publica automatica. A fila diaria fica
+pronta no banco e pode ser exportada com:
+
+```sh
+docker compose exec backend npm run export:tiktok
+```
+
 ### Endpoints
 - **GET /api/social/today** - Retorna plano social do dia (gera automaticamente se não existir)
 - **GET /api/social/:date** - Retorna plano social de uma data específica (formato: YYYY-MM-DD)

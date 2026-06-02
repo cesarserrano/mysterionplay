@@ -9,7 +9,9 @@
     "prisma:generate": "prisma generate",
     "prisma:migrate": "prisma migrate deploy",
     "seed:mysteries": "tsx scripts/generateMysteries.ts",
-    "generate:images": "node scripts/generateMysteryImages.js"
+    "generate:images": "node scripts/generateMysteryImages.js",
+    "publish:social": "node scripts/publishSocialPosts.js",
+    "export:tiktok": "node scripts/exportTikTokQueue.js"
   },
   "dependencies": {
     "@prisma/client": "^6.8.2",

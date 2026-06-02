@@ -419,6 +419,19 @@ ${baseUrl}`,
     createPost(
       '00:00',
       'main',
+      'tiktok',
+      `Arquivo do dia: ${mystery.title}
+
+Uma evidencia permaneceu depois do expediente.
+
+#misterio #argbrasil #nostalgia`,
+    ),
+  )
+
+  posts.push(
+    createPost(
+      '00:00',
+      'main',
       'instagram_feed',
       `Mistério #${mystery.id}
 
