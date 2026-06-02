@@ -1,0 +1,68 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Mystery {
+  // String preserves the legacy 000/001 records. New generated IDs are YYYYMMDD.
+  id          String       @id
+  date        String       @unique
+  title       String
+  image       String       @default("hero")
+  answer      String       @unique
+  aliases     Json         @default("[]")
+  tips        Json         @default("[]")
+  explanation String
+  difficulty  Int          @default(3)
+  imagePrompt String       @default("") @map("image_prompt")
+  imageUrl    String?      @map("image_url")
+  status      String       @default("PENDING")
+  createdAt   DateTime     @default(now()) @map("created_at")
+  submissions Submission[]
+  socialPosts SocialPost[]
+
+  @@map("mysteries")
+}
+
+model Submission {
+  id        String    @id
+  mysteryId String    @map("mystery_id")
+  playerId  String    @map("player_id")
+  name      String
+  attempts  Int       @default(0)
+  startedAt DateTime  @map("started_at")
+  solvedAt  DateTime? @map("solved_at")
+  hintsUsed Int       @default(0) @map("hints_used")
+  createdAt DateTime  @default(now()) @map("created_at")
+  mystery   Mystery   @relation(fields: [mysteryId], references: [id], onDelete: Cascade)
+
+  @@unique([mysteryId, playerId])
+  @@map("submissions")
+}
+
+model SocialPost {
+  id             String    @id
+  mysteryId      String    @map("mystery_id")
+  date           String
+  time           String
+  platform       String
+  type           String
+  status         String    @default("draft")
+  text           String
+  imageUrl       String?   @map("image_url")
+  link           String?
+  publishMode    String    @default("manual") @map("publish_mode")
+  postedAt       DateTime? @map("posted_at")
+  postedBy       String?   @map("posted_by")
+  externalPostId String?   @map("external_post_id")
+  errorMessage   String?   @map("error_message")
+  createdAt      DateTime  @default(now()) @map("created_at")
+  updatedAt      DateTime  @default(now()) @map("updated_at")
+  mystery        Mystery   @relation(fields: [mysteryId], references: [id], onDelete: Cascade)
+
+  @@map("social_posts")
+}

@@ -42,6 +42,35 @@ O login cria uma sessao via cookie HttpOnly.
 ## Uploads
 Imagens enviadas pelo admin saem em /api/uploads/...
 
+## Temporada automatica de misterios
+
+No backend, instale as dependencias e gere o Prisma Client:
+
+```sh
+cd backend
+npm install
+npx prisma generate
+```
+
+Com `DATABASE_URL` configurada, aplique a migracao aditiva e gere 60 misterios
+diarios a partir da data atual em `America/Sao_Paulo`:
+
+```sh
+npx prisma migrate deploy
+npx tsx scripts/generateMysteries.ts
+```
+
+Para definir a data editorial explicitamente ou revisar sem persistir:
+
+```sh
+npx tsx scripts/generateMysteries.ts --start 2026-06-02
+npx tsx scripts/generateMysteries.ts --dry-run
+```
+
+O gerador nao sobrescreve IDs, datas ou respostas existentes. Cada imagem fica
+com `imageUrl = null` e `status = PENDING` ate um servico de imagem processar o
+`imagePrompt`.
+
 ## Ritual Social (Automação de Posts)
 
 ### Endpoints

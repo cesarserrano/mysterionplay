@@ -103,8 +103,20 @@ async function migrate() {
       aliases JSONB NOT NULL DEFAULT '[]'::jsonb,
       tips JSONB NOT NULL DEFAULT '[]'::jsonb,
       explanation TEXT NOT NULL,
+      difficulty INTEGER NOT NULL DEFAULT 3,
+      image_prompt TEXT NOT NULL DEFAULT '',
+      image_url TEXT,
+      status TEXT NOT NULL DEFAULT 'PENDING',
       created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
     )
+  `)
+
+  await pool.query(`
+    ALTER TABLE mysteries
+      ADD COLUMN IF NOT EXISTS difficulty INTEGER NOT NULL DEFAULT 3,
+      ADD COLUMN IF NOT EXISTS image_prompt TEXT NOT NULL DEFAULT '',
+      ADD COLUMN IF NOT EXISTS image_url TEXT,
+      ADD COLUMN IF NOT EXISTS status TEXT NOT NULL DEFAULT 'PENDING'
   `)
 
   await pool.query(`

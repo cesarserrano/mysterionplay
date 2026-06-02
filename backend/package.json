@@ -5,11 +5,20 @@
   "type": "module",
   "scripts": {
     "dev": "node --watch server.js",
-    "start": "node server.js"
+    "start": "node server.js",
+    "prisma:generate": "prisma generate",
+    "prisma:migrate": "prisma migrate deploy",
+    "seed:mysteries": "tsx scripts/generateMysteries.ts"
   },
   "dependencies": {
+    "@prisma/client": "^6.8.2",
     "express": "^5.1.0",
     "multer": "^2.0.2",
     "pg": "^8.16.3"
+  },
+  "devDependencies": {
+    "prisma": "^6.8.2",
+    "tsx": "^4.19.4",
+    "typescript": "^5.8.3"
   }
 }
